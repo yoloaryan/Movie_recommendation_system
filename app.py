@@ -75,7 +75,7 @@ def local_api_fallback(path: str, params: Optional[Dict[str, Any]] = None) -> Tu
             
         elif path.startswith("/movie/id/"):
             tmdb_id = int(path.split("/")[-1])
-            res = run_async(main_tmdb_details(tmdb_id=tmdb_id))
+            res = run_async(main_tmdb_details(movie_id=tmdb_id))
             return res.dict() if hasattr(res, 'dict') else res, None
             
         elif path == "/movie/search":
