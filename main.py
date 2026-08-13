@@ -9,10 +9,18 @@ import numpy
 import numpy as np
 import pandas as pd
 
-# NumPy compatibility mapping for models pickled with different numpy versions
-sys.modules['numpy._core'] = numpy.core
-sys.modules['numpy._core.numeric'] = numpy.core.numeric
-sys.modules['numpy._core.multiarray'] = numpy.core.multiarray
+# NumPy compatibility mapping for models pickled with numpy 2.x vs 1.x
+try:
+    if not hasattr(numpy, '_core'):
+        sys.modules['numpy._core'] = numpy.core
+        sys.modules['numpy._core.numeric'] = getattr(numpy.core, 'numeric', numpy.core)
+        sys.modules['numpy._core.multiarray'] = getattr(numpy.core, 'multiarray', numpy.core)
+        sys.modules['numpy._core.umath'] = getattr(numpy.core, 'umath', numpy.core)
+        sys.modules['numpy._core.fromnumeric'] = getattr(numpy.core, 'fromnumeric', numpy.core)
+        sys.modules['numpy._core.defchararray'] = getattr(numpy.core, 'defchararray', numpy.core)
+        sys.modules['numpy._core.strings'] = getattr(numpy.core, 'defchararray', numpy.core)
+except Exception:
+    pass
 
 import httpx
 from fastapi import FastAPI, HTTPException, Query
