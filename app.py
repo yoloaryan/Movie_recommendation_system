@@ -25,7 +25,7 @@ def get_api_base() -> str:
     except Exception:
         pass
         
-    return "https://movie-rec-466x.onrender.com"
+    return "https://movie-recommendation-system-nimu.onrender.com"
 
 TMDB_IMG = "https://image.tmdb.org/t/p/w500"
 

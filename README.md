@@ -2,6 +2,8 @@
 
 An end-to-end, high-performance Movie Recommendation Application powered by **TF-IDF Content-Based Natural Language Processing (NLP)**, **Cosine Similarity**, **FastAPI Backend Services**, and a **Streamlit Web UI** with **TMDB API integration**.
 
+🌐 **Live Web Application**: [https://movie-recommendation-system-nimu.onrender.com/](https://movie-recommendation-system-nimu.onrender.com/)
+
 ---
 
 ## 🌟 Key Features
