@@ -1,3 +1,14 @@
+"""
+FastAPI Backend Application for Movie Recommendation System.
+
+This module exposes asynchronous REST API endpoints for:
+1. Health checks and server status.
+2. TMDB movie catalog discovery (Popular, Trending, Top Rated, Upcoming, Now Playing).
+3. Search functionality (autocomplete, keyword search, details lookup).
+4. Content-based movie recommendations using TF-IDF NLP sparse matrix and Cosine Similarity.
+5. Combined search recommendation bundle (TMDB details + TF-IDF similarity + Genre matches).
+"""
+
 import os
 import sys
 import pickle
@@ -9,7 +20,7 @@ import numpy
 import numpy as np
 import pandas as pd
 
-# NumPy compatibility mapping for models pickled with numpy 2.x vs 1.x
+# NumPy compatibility mapping for models pickled across numpy 2.x and 1.x versions
 try:
     if not hasattr(numpy, '_core'):
         sys.modules['numpy._core'] = numpy.core
@@ -28,9 +39,10 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from dotenv import load_dotenv
 
-# =========================
-# ENV
-# =========================
+# ==============================================================================
+# ENVIRONMENT & API CONFIGURATION
+# Load environment variables from .env file or set default fallback values
+# ==============================================================================
 load_dotenv()
 TMDB_API_KEY = (
     os.getenv("TMDB_API_KEY")
@@ -41,14 +53,19 @@ TMDB_API_KEY = (
 TMDB_BASE = "https://api.themoviedb.org/3"
 TMDB_IMG_500 = "https://image.tmdb.org/t/p/w500"
 
-# =========================
-# FASTAPI APP
-# =========================
-app = FastAPI(title="Movie Recommender API", version="3.0")
+# ==============================================================================
+# FASTAPI INSTANCE INITIALIZATION
+# Configure application metadata and enable Cross-Origin Resource Sharing (CORS)
+# ==============================================================================
+app = FastAPI(
+    title="Movie Recommender API",
+    description="High-performance asynchronous API for movie recommendations, TF-IDF NLP similarity, and TMDB integration.",
+    version="3.0"
+)
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # for local streamlit
+    allow_origins=["*"],  # Permits requests from local Streamlit UI and remote web hosts
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

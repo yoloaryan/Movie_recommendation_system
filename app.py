@@ -1,3 +1,14 @@
+"""
+Streamlit Web UI Application for Movie Recommendation System.
+
+This module provides an interactive web interface featuring:
+1. Dynamic backend connection auto-detection (Local FastAPI server vs. Deployed Render URL).
+2. Dual-mode execution: API client mode with standalone local python fallback.
+3. Interactive search input with dropdown suggestions and keyword movie matching.
+4. Poster grid display for home feeds (Trending, Popular, Top Rated, Now Playing, Upcoming).
+5. Detailed movie page view with plot summary, poster backdrop, TF-IDF NLP recommendations, and genre discovery.
+"""
+
 import os
 import sys
 import json
@@ -6,10 +17,17 @@ import requests
 import streamlit as st
 from typing import Optional, Dict, Any, Tuple
 
-# =============================
-# CONFIG & AUTO-DETECT BACKEND
-# =============================
+# ==============================================================================
+# CONFIGURATION & AUTOMATIC BACKEND SELECTION
+# Detects whether local FastAPI server (http://127.0.0.1:8000) is running,
+# and automatically falls back to the live Render cloud deployment.
+# ==============================================================================
 def get_api_base() -> str:
+    """
+    Determines the appropriate base API URL to connect to.
+    First checks API_BASE env var, then probes local server health,
+    and defaults to production Render endpoint if offline.
+    """
     env_base = os.getenv("API_BASE")
     if env_base:
         return env_base.rstrip("/")
@@ -27,6 +45,7 @@ def get_api_base() -> str:
 API_BASE = get_api_base()
 TMDB_IMG = "https://image.tmdb.org/t/p/w500"
 
+# Set Streamlit page options (tab title, icon, and wide responsive layout)
 st.set_page_config(page_title="Movie Recommender", page_icon="🎬", layout="wide")
 
 # Try loading local backend functions from main.py for standalone fallback execution
