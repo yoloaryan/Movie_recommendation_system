@@ -150,7 +150,6 @@ def goto_details(tmdb_id: int):
 # =============================
 # API HELPERS
 # =============================
-@st.cache_data(ttl=30, show_spinner=False)
 def api_get_json(path: str, params_str: Optional[str] = None):
     params = json.loads(params_str) if params_str else None
     api_base = get_api_base()
