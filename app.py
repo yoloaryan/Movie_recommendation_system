@@ -31,6 +31,7 @@ st.set_page_config(page_title="Movie Recommender", page_icon="🎬", layout="wid
 
 # Try loading local backend functions from main.py for standalone fallback execution
 _local_backend_ready = False
+_local_backend_err = ""
 try:
     from main import (
         load_pickles as main_load_pickles,
@@ -44,6 +45,7 @@ try:
     _local_backend_ready = True
 except Exception as e:
     _local_backend_ready = False
+    _local_backend_err = str(e)
 
 def run_async(coro):
     try:
@@ -55,7 +57,7 @@ def run_async(coro):
 
 def local_api_fallback(path: str, params: Optional[Dict[str, Any]] = None) -> Tuple[Any, Optional[str]]:
     if not _local_backend_ready:
-        return None, "Backend service unavailable and local models could not be loaded."
+        return None, f"Local models initialization error: {_local_backend_err or 'Unknown error'}"
     
     params = params or {}
     try:

@@ -24,15 +24,14 @@ from dotenv import load_dotenv
 # ENV
 # =========================
 load_dotenv()
-TMDB_API_KEY = os.getenv("TMDB_API_KEY") or os.getenv("TMBDI_API_KEY")
+TMDB_API_KEY = (
+    os.getenv("TMDB_API_KEY")
+    or os.getenv("TMBDI_API_KEY")
+    or "f050e150197472ead1ad59802b5933ff"
+)
 
 TMDB_BASE = "https://api.themoviedb.org/3"
 TMDB_IMG_500 = "https://image.tmdb.org/t/p/w500"
-
-if not TMDB_API_KEY:
-    # Don't crash import-time in production if you prefer; but for you better fail early:
-    raise RuntimeError(
-        "TMDB_API_KEY missing. Put it in .env as TMDB_API_KEY=xxxx")
 
 # =========================
 # FASTAPI APP
