@@ -1,18 +1,15 @@
 import os
+import sys
+import json
+import asyncio
 import requests
 import streamlit as st
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, Tuple
 
 # =============================
 # CONFIG & AUTO-DETECT BACKEND
 # =============================
 def get_api_base() -> str:
-    """
-    Dynamically resolves API backend URL.
-    1. Respects explicit API_BASE environment variable.
-    2. Checks if local FastAPI server (http://127.0.0.1:8000) is running.
-    3. Falls back to Render deployment URL.
-    """
     env_base = os.getenv("API_BASE")
     if env_base:
         return env_base.rstrip("/")
@@ -20,16 +17,81 @@ def get_api_base() -> str:
     local_url = "http://127.0.0.1:8000"
     try:
         r = requests.get(f"{local_url}/health", timeout=1.0)
-        if r.status_code == 200:
+        if r.status_code == 200 and "application/json" in r.headers.get("Content-Type", "").lower():
             return local_url
     except Exception:
         pass
         
     return "https://movie-recommendation-system-nimu.onrender.com"
 
+API_BASE = get_api_base()
 TMDB_IMG = "https://image.tmdb.org/t/p/w500"
 
 st.set_page_config(page_title="Movie Recommender", page_icon="🎬", layout="wide")
+
+# Try loading local backend functions from main.py for standalone fallback execution
+_local_backend_ready = False
+try:
+    from main import (
+        load_pickles as main_load_pickles,
+        home as main_home,
+        tmdb_search_movies as main_tmdb_search,
+        tmdb_movie_details as main_tmdb_details,
+        search_bundle as main_search_bundle,
+        recommend_genre as main_recommend_genre
+    )
+    main_load_pickles()
+    _local_backend_ready = True
+except Exception as e:
+    _local_backend_ready = False
+
+def run_async(coro):
+    try:
+        loop = asyncio.get_event_loop()
+    except RuntimeError:
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+    return loop.run_until_complete(coro)
+
+def local_api_fallback(path: str, params: Optional[Dict[str, Any]] = None) -> Tuple[Any, Optional[str]]:
+    if not _local_backend_ready:
+        return None, "Backend service unavailable and local models could not be loaded."
+    
+    params = params or {}
+    try:
+        if path == "/home":
+            category = params.get("category", "popular")
+            limit = int(params.get("limit", 24))
+            res = run_async(main_home(category=category, limit=limit))
+            return [m.dict() if hasattr(m, 'dict') else m for m in res], None
+            
+        elif path == "/tmdb/search":
+            query = params.get("query", "")
+            page = int(params.get("page", 1))
+            res = run_async(main_tmdb_search(query=query, page=page))
+            return res, None
+            
+        elif path.startswith("/movie/id/"):
+            tmdb_id = int(path.split("/")[-1])
+            res = run_async(main_tmdb_details(tmdb_id=tmdb_id))
+            return res.dict() if hasattr(res, 'dict') else res, None
+            
+        elif path == "/movie/search":
+            query = params.get("query", "")
+            tfidf_top_n = int(params.get("tfidf_top_n", 12))
+            genre_limit = int(params.get("genre_limit", 12))
+            res = run_async(main_search_bundle(query=query, tfidf_top_n=tfidf_top_n, genre_limit=genre_limit))
+            return res.dict() if hasattr(res, 'dict') else res, None
+            
+        elif path == "/recommend/genre":
+            tmdb_id = int(params.get("tmdb_id", 0))
+            limit = int(params.get("limit", 18))
+            res = run_async(main_recommend_genre(tmdb_id=tmdb_id, limit=limit))
+            return [m.dict() if hasattr(m, 'dict') else m for m in res], None
+
+        return None, f"Path '{path}' not supported in fallback"
+    except Exception as e:
+        return None, f"Local fallback error: {e}"
 
 # =============================
 # STYLES (minimal modern)
@@ -90,24 +152,21 @@ def goto_details(tmdb_id: int):
 # =============================
 @st.cache_data(ttl=30, show_spinner=False)
 def api_get_json(path: str, params_str: Optional[str] = None):
-    """
-    Cached API fetcher. params_str is a serialized string representation of params
-    to ensure 100% hashable caching in Streamlit.
-    """
+    params = json.loads(params_str) if params_str else None
     api_base = get_api_base()
     try:
-        import json
-        params = json.loads(params_str) if params_str else None
-        r = requests.get(f"{api_base}{path}", params=params, timeout=20)
-        if r.status_code >= 400:
-            return None, f"HTTP {r.status_code}: {r.text[:300]}"
-        return r.json(), None
-    except Exception as e:
-        return None, f"Request failed: {e}"
+        r = requests.get(f"{api_base}{path}", params=params, timeout=10)
+        ct = r.headers.get("Content-Type", "").lower()
+        if r.status_code == 200 and "application/json" in ct:
+            return r.json(), None
+    except Exception:
+        pass
+
+    # Fallback to local backend execution if API server returns HTML or fails
+    return local_api_fallback(path, params)
 
 
 def fetch_api(path: str, params: Optional[Dict[str, Any]] = None):
-    import json
     params_str = json.dumps(params, sort_keys=True) if params else None
     return api_get_json(path, params_str)
 
